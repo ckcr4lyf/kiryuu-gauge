@@ -3,8 +3,8 @@
   "description": "Starter template for writing TypeScript tests for Gauge",
   "dependencies": {
     "dotenv": "^16.0.3",
-    "gauge-ts": "0.1.0",
     "got": "^11.8.6",
+    "gauge-ts": "0.1.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
   },
