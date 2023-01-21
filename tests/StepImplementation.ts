@@ -3,6 +3,8 @@ import { Step, Table, BeforeSuite, AfterSuite } from "gauge-ts";
 import { strictEqual } from 'assert';
 import { checkBox, click, closeBrowser, evaluate, goto, into, link, openBrowser, press, text, textBox, toLeftOf, write } from 'taiko';
 import assert = require("assert");
+// import got from "got";
+// import { config } from "./config";
 
 export default class StepImplementation {
     @BeforeSuite()
@@ -73,4 +75,9 @@ export default class StepImplementation {
         await evaluate(() => localStorage.clear());
     }
 
+    // @Step("Kiryuu should be healthy")
+    // public async kiryuuHealthy(){
+    //     const result = await got.get(`${config.KIRYUU_HOST}/healthz`);
+    //     strictEqual(result.statusCode, 200, `Fail, expected HTTP 200, received ${result.statusCode}`);
+    // }
 }
