@@ -3,6 +3,9 @@ import { Step } from "gauge-ts";
 import { config } from './config';
 import { strictEqual } from 'assert';
 import { addPeers } from './redis';
+//@ts-ignore
+import { decode }from 'bencode';
+// import bencode from '@ckcr4lyf/bencode-esm'
 
 export default class Kiryuu {
     
@@ -20,6 +23,8 @@ export default class Kiryuu {
         
         console.log(result.rawBody)
         console.log(result.body)
+
+        console.log(decode(result.body));
 
 
     }

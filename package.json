@@ -1,7 +1,8 @@
 {
-  "name": "gauge-ts-template",
+  "type": "commonjs",
   "description": "Starter template for writing TypeScript tests for Gauge",
   "dependencies": {
+    "bencode": "^3.0.0",
     "dotenv": "^16.0.3",
     "gauge-ts": "0.1.1",
     "got": "^11.8.6",
