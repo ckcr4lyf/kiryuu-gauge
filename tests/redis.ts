@@ -23,7 +23,11 @@ export const addPeers = async (infohash: string): Promise<Buffer[]> => {
 export default class RedisStuffs {
     @Step("Seed redis with seeders")
     public async seedRedis(){
-        const peersAdded = await addPeers('4141414141414141414141414141414141414141');
+        // Generate fake 20 byte "SHA"
+        const sha = crypto.randomBytes(20);
+        const peersAdded = await addPeers(sha.toString('hex'));
+        console.log(`Added to ${sha.toString('hex')}`);
+        DataStoreFactory.getScenarioDataStore().put('infohash', sha);
         DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
 }
