@@ -1,10 +1,11 @@
 import * as crypto from 'crypto';
 import { Step, DataStoreFactory } from 'gauge-ts';
 import Redis from 'ioredis';
+import { config } from './config';
 
 export const addPeers = async (infohash: string): Promise<Buffer[]> => {
     const peersAdded: Buffer[] = [];
-    const client = new Redis(6379, '127.0.0.1');
+    const client = new Redis(config.REDIS_HOST);
 
     const seederKey = `${infohash}_seeders`;
     
