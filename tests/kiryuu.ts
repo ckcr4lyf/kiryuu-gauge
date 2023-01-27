@@ -19,15 +19,22 @@ export default class Kiryuu {
     @Step("Announce should have expected seeders")
     public async announceSeeders(){
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        console.log(`Gonna announce for ${urlEncodeBuffer(sha)}`);
         const uri = `${config.KIRYUU_HOST}/announce?info_hash=${urlEncodeBuffer(sha)}&port=4444&left=69`
-        console.log(uri);
         const result = await axios.get(uri, {
             responseType: 'arraybuffer'
         });
+
         strictEqual(result.status, 200, `Fail, expected HTTP 200, received ${result.status}`);
-        
-        console.log(result.data)
-        console.log(decode(result.data));
+        const decoded = decode(result.data);
+
+        const dPeers: Buffer = decoded.peers;
+        const added: Buffer[] = DataStoreFactory.getScenarioDataStore().get('peersAdded');
+
+        for (let i = 0; i < dPeers.length; i+=6){
+            const singlePeer = dPeers.subarray(i, i + 6);
+            if (added.some(peer => peer.compare(singlePeer) === 0) === false){
+                throw new Error(`Could not find ${singlePeer} in the list of added peers...`);
+            }
+        }
     }
 }
