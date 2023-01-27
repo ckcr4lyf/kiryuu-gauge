@@ -3,22 +3,37 @@ import { Step, DataStoreFactory } from 'gauge-ts';
 import Redis from 'ioredis';
 import { config } from './config';
 
-export const addPeers = async (infohash: string): Promise<Buffer[]> => {
-    const peersAdded: Buffer[] = [];
-    const client = new Redis(config.REDIS_HOST);
+const peerExists = (peer: Buffer, existing: Buffer[]): boolean => {
+    return existing.some(existingPeer => peer.compare(existingPeer) === 0);
+}
 
-    const seederKey = `${infohash}_seeders`;
-    
-    for (let i = 0; i < 50; i++){
-        const peerInfo = crypto.randomBytes(6);
-        console.log(`adding`, peerInfo)
-        await client.zadd(seederKey, Date.now(), peerInfo);
-        peersAdded.push(peerInfo);
+export const genUniquePeers = (count: number, existingPeers: Buffer[]): Buffer[] => {
+    const generatedPeers = [];
+
+    for (let i = 0; i < count; i++){
+        let peer = crypto.randomBytes(6);
+        
+        // keep generating if not unique
+        while (peerExists(peer, [...existingPeers, ...generatedPeers]) === true){
+            peer = crypto.randomBytes(6);
+        }
+
+        generatedPeers.push(peer);
     }
 
-    // const a = await client.zrangeBuffer(seederKey, 0, 50);
+    return generatedPeers;
+}
 
-    return peersAdded
+export const addPeers = async (infohash: string): Promise<Buffer[]> => {
+    const client = new Redis(config.REDIS_HOST);
+    const seederKey = `${infohash}_seeders`;
+    const peersToAdd = genUniquePeers(50, []);
+    
+    for (let i = 0; i < peersToAdd.length; i++){
+        await client.zadd(seederKey, Date.now(), peersToAdd[i]);
+    }
+
+    return peersToAdd;
 }
 
 export default class RedisStuffs {
@@ -27,7 +42,6 @@ export default class RedisStuffs {
         // Generate fake 20 byte "SHA"
         const sha = crypto.randomBytes(20);
         const peersAdded = await addPeers(sha.toString('hex'));
-        console.log(`Added to ${sha.toString('hex')}`);
         DataStoreFactory.getScenarioDataStore().put('infohash', sha);
         DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
