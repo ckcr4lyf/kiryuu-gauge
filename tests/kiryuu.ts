@@ -37,4 +37,15 @@ export default class Kiryuu {
             }
         }
     }
+
+    @Step("Send announce as seeder")
+    public async announceAsSeeder(){
+        const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
+        const uri = `${config.KIRYUU_HOST}/announce?info_hash=${urlEncodeBuffer(sha)}&port=4444&left=0`
+        const result = await axios.get(uri, {
+            responseType: 'arraybuffer'
+        });
+
+        strictEqual(result.status, 200, `Fail, expected HTTP 200, received ${result.status}`);
+    }
 }
