@@ -4,11 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm i -g @getgauge/cli
-RUN gauge install html-report
-RUN gauge install ts
-RUN gauge install screenshot
-
+RUN apk add curl
+RUN curl -SsL https://downloads.gauge.org/stable | sh
 RUN npm ci
 
 ENTRYPOINT [ "/app/entrypoint.sh" ]
