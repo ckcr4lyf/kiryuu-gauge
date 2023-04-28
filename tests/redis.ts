@@ -45,4 +45,40 @@ export default class RedisStuffs {
         DataStoreFactory.getScenarioDataStore().put('infohash', sha);
         DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
+
+    @Step("Add self as old seeder")
+    public async addOldSeeder(){
+        const client = new Redis(config.REDIS_HOST);
+        const sha = crypto.randomBytes(20);
+        const infohash = sha.toString('hex');
+        const seederKey = `${infohash}_seeders`;
+
+        // We will use 127.0.0.1:4444 as the peer we add
+        const peer = Buffer.from([0x7F, 0x00, 0x00, 0x01, 0x11, 0x5C]); //127.0.0.1:4444
+        
+        await client.zadd(seederKey, 0, peer);
+        console.log(`Added peer to ${seederKey}`);
+        DataStoreFactory.getScenarioDataStore().put('infohash', sha);
+    }
+
+    @Step("Expect to be in redis with new timestamp")
+    public async checkSelf(){
+        const client = new Redis(config.REDIS_HOST);
+        const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
+        const infohash = sha.toString('hex');
+        const seederKey = `${infohash}_seeders`;
+        const result = await client.zrangebyscoreBuffer(seederKey, 0, '+inf', 'WITHSCORES');
+
+        if (result.length !== 2){
+            throw new Error(`Expected two entries in response, got ${result.length}`);
+        }
+
+        const score = parseInt(result[1].toString());
+        const now = Date.now();
+
+        // 10 seconds is generous
+        if (now - score > 10000){
+            throw new Error(`Expected diff to be within 10 seconds but was more! Now: ${now} , Score: ${score}`);
+        }
+    }
 }
