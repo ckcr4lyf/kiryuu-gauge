@@ -52,9 +52,7 @@ export default class RedisStuffs {
         const sha = crypto.randomBytes(20);
         const infohash = sha.toString('hex');
         const seederKey = `${infohash}_seeders`;
-
-        // We will use 127.0.0.1:4444 as the peer we add
-        const peer = Buffer.from([0x7F, 0x00, 0x00, 0x01, 0x11, 0x5C]); //127.0.0.1:4444
+        const peer = Buffer.from(config.ANNOUNCE_IP_PORT, 'hex'); // e.g. 7F000001115C (0x7F = 127, 0x115C = 4444)
         
         await client.zadd(seederKey, 0, peer);
         console.log(`Added peer to ${seederKey}`);
