@@ -70,7 +70,7 @@ export default class RedisStuffs {
         const result = await client.zrangebyscoreBuffer(seederKey, 0, '+inf', 'WITHSCORES');
 
         if (result.length !== 2){
-            throw new Error(`Expected two entries in response, got ${result.length}. [Result = ${result}]`);
+            throw new Error(`Expected two entries in response, got ${result.length}. [Result = ${result.map(el => el.toString('hex'))}]`);
         }
 
         const score = parseInt(result[1].toString());
