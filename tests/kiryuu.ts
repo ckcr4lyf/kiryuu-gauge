@@ -47,5 +47,6 @@ export default class Kiryuu {
         });
 
         strictEqual(result.status, 200, `Fail, expected HTTP 200, received ${result.status}`);
+        console.log(`Response from tracker: ${JSON.stringify(decode(result.data), null, 2)} [${result.data}]`)
     }
 }
