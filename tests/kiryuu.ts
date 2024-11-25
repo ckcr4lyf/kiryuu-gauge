@@ -27,12 +27,18 @@ export default class Kiryuu {
         strictEqual(result.status, 200, `Fail, expected HTTP 200, received ${result.status}`);
         const decoded = decode(result.data);
 
+        const peersWeManuallyAdded: Buffer[] = DataStoreFactory.getScenarioDataStore().get('peersAdded');
+
+        // damn this test is FUCKED, if decoded is zero, then loop never runs
+        // weshould have been looping through scenario store, and making sure they exist in decoded...
         const dPeers: Buffer = decoded.peers;
-        const added: Buffer[] = DataStoreFactory.getScenarioDataStore().get('peersAdded');
+        const dPeersCount = dPeers.length / 6;
+
+        strictEqual(peersWeManuallyAdded, dPeersCount, `Fail, expected to have received ${peersWeManuallyAdded.length} peers, got ${dPeersCount}`);
 
         for (let i = 0; i < dPeers.length; i+=6){
             const singlePeer = dPeers.subarray(i, i + 6);
-            if (added.some(peer => peer.compare(singlePeer) === 0) === false){
+            if (peersWeManuallyAdded.some(peer => peer.compare(singlePeer) === 0) === false){
                 throw new Error(`Could not find ${singlePeer} in the list of added peers...`);
             }
         }
