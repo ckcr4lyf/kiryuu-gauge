@@ -34,7 +34,7 @@ export default class Kiryuu {
         const dPeers: Buffer = decoded.peers;
         const dPeersCount = dPeers.length / 6;
 
-        strictEqual(peersWeManuallyAdded, dPeersCount, `Fail, expected to have received ${peersWeManuallyAdded.length} peers, got ${dPeersCount}`);
+        strictEqual(peersWeManuallyAdded.length, dPeersCount, `Fail, expected to have received ${peersWeManuallyAdded.length} peers, got ${dPeersCount}`);
 
         for (let i = 0; i < dPeers.length; i+=6){
             const singlePeer = dPeers.subarray(i, i + 6);

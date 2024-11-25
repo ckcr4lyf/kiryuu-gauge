@@ -24,13 +24,16 @@ export const genUniquePeers = (count: number, existingPeers: Buffer[]): Buffer[]
     return generatedPeers;
 }
 
-export const addPeers = async (infohash: string): Promise<Buffer[]> => {
+export const addPeers = async (infohash: Buffer): Promise<Buffer[]> => {
     const client = new Redis(config.REDIS_HOST);
-    const seederKey = `${infohash}_seeders`;
+    const seederKey = Buffer.concat([infohash, Buffer.from(":s")]); // `${20 RAW BYTES}:s`
     const peersToAdd = genUniquePeers(50, []);
     
     for (let i = 0; i < peersToAdd.length; i++){
-        await client.zadd(seederKey, Date.now(), peersToAdd[i]);
+        const dataToAdd = new Map<Buffer, Buffer>();
+        dataToAdd.set(peersToAdd[i], Buffer.from([0x01]));
+        await client.hset(seederKey, dataToAdd);
+        await client.call("HEXPIRE", seederKey, 60 * 31, "FIELDS", 1, peersToAdd[i]);
     }
 
     return peersToAdd;
@@ -41,7 +44,7 @@ export default class RedisStuffs {
     public async seedRedis(){
         // Generate fake 20 byte "SHA"
         const sha = crypto.randomBytes(20);
-        const peersAdded = await addPeers(sha.toString('hex'));
+        const peersAdded = await addPeers(sha);
         DataStoreFactory.getScenarioDataStore().put('infohash', sha);
         DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
