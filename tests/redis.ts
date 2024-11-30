@@ -31,7 +31,7 @@ export const addPeers = async (infohash: Buffer): Promise<Buffer[]> => {
     
     for (let i = 0; i < peersToAdd.length; i++){
         const dataToAdd = new Map<Buffer, Buffer>();
-        dataToAdd.set(peersToAdd[i], Buffer.from([0x01]));
+        dataToAdd.set(peersToAdd[i], Buffer.from([0x31]));
         await client.hset(seederKey, dataToAdd);
         await client.call("HEXPIRE", seederKey, 60 * 31, "FIELDS", 1, peersToAdd[i]);
     }
