@@ -44,6 +44,24 @@ export default class Kiryuu {
         }
     }
 
+    @Step("Announce with no-URL blacklisted infohash should return HTTP 451")
+    public async blacklist451(){
+        const infohash = Buffer.from('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'hex');
+        const uri = `${config.KIRYUU_HOST}/announce?info_hash=${urlEncodeBuffer(infohash)}&port=4444&left=69`;
+        const result = await axios.get(uri, { validateStatus: () => true });
+        strictEqual(result.status, 451, `Fail, expected HTTP 451, received ${result.status}`);
+    }
+
+    @Step("Announce with URL blacklisted infohash should return HTTP 307 to correct location")
+    public async blacklist307(){
+        const infohash = Buffer.from('44cf2381cf24bc9cd3dbe3c1c28dde3375ba6bda', 'hex');
+        const expectedUrl = 'https://uwu.mywaifu.best/dmca/44cf2381cf24bc9cd3dbe3c1c28dde3375ba6bda.txt';
+        const uri = `${config.KIRYUU_HOST}/announce?info_hash=${urlEncodeBuffer(infohash)}&port=4444&left=69`;
+        const result = await axios.get(uri, { maxRedirects: 0, validateStatus: () => true });
+        strictEqual(result.status, 307, `Fail, expected HTTP 307, received ${result.status}`);
+        strictEqual(result.headers.location, expectedUrl, `Fail, expected Location header ${expectedUrl}, received ${result.headers.location}`);
+    }
+
     @Step("Send announce as seeder")
     public async announceAsSeeder(){
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
