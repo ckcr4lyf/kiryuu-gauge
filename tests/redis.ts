@@ -1,9 +1,9 @@
 import * as crypto from 'crypto';
 import { Step, DataStoreFactory } from 'gauge-ts';
-import Redis from 'ioredis';
+import axios from 'axios';
+import { strictEqual } from 'assert';
 import { config } from './config';
-
-type PeerPool = 's' | 'l';
+import { urlEncodeBuffer } from './utils';
 
 const peerExists = (peer: Buffer, existing: Buffer[]): boolean => {
     return existing.some(existingPeer => peer.compare(existingPeer) === 0);
@@ -25,26 +25,23 @@ export const genUniquePeers = (count: number, existingPeers: Buffer[]): Buffer[]
     return generatedPeers;
 }
 
-export const addPeers = async (infohash: Buffer, pool: PeerPool = 's'): Promise<Buffer[]> => {
-    const client = new Redis(config.REDIS_HOST);
-    const peerKey = Buffer.concat([infohash, Buffer.from(`:${pool}`)]);
+export const addPeers = async (infohash: Buffer, pool: 's' | 'l' = 's'): Promise<Buffer[]> => {
     const peersToAdd = genUniquePeers(50, []);
-    
-    for (let i = 0; i < peersToAdd.length; i++){
-        const dataToAdd = new Map<Buffer, Buffer>();
-        dataToAdd.set(peersToAdd[i], Buffer.from([0x31]));
-        await client.hset(peerKey, dataToAdd);
-        await client.call("HEXPIRE", peerKey, 60 * 31, "FIELDS", 1, peersToAdd[i]);
-    }
+    const body = Buffer.concat(peersToAdd);
 
-    await client.quit();
+    const result = await axios.post(
+        `${config.KIRYUU_HOST}/test/seed?info_hash=${urlEncodeBuffer(infohash)}&pool=${pool}`,
+        body,
+        {
+            headers: { 'Content-Type': 'application/octet-stream' },
+            validateStatus: () => true,
+        },
+    );
+
+    strictEqual(result.status, 200, `Fail, expected HTTP 200 seeding peers, received ${result.status}`);
+
     return peersToAdd;
 }
-
-const callerPeer = (): Buffer => Buffer.from(config.ANNOUNCE_IP_PORT, 'hex');
-
-const peerHashKey = (infohash: Buffer, pool: PeerPool): Buffer =>
-    Buffer.concat([infohash, Buffer.from(`:${pool}`)]);
 
 export default class RedisStuffs {
     @Step("Generate fresh infohash")
@@ -71,53 +68,41 @@ export default class RedisStuffs {
 
     @Step("Peer should exist in seeder hash")
     public async peerInSeederHash(){
-        const client = new Redis(config.REDIS_HOST);
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        const peer = callerPeer();
-        const exists = await client.hexists(peerHashKey(sha, 's'), peer);
-        await client.quit();
-
-        if (exists !== 1) {
-            throw new Error(`Expected peer ${peer.toString('hex')} in seeder hash`);
-        }
+        const result = await axios.get(
+            `${config.KIRYUU_HOST}/test/peer-exists?info_hash=${urlEncodeBuffer(sha)}&pool=s&port=4444`,
+            { validateStatus: () => true },
+        );
+        strictEqual(result.status, 200, `Fail, expected peer in seeder hash, received HTTP ${result.status}`);
     }
 
     @Step("Peer should not exist in seeder hash")
     public async peerNotInSeederHash(){
-        const client = new Redis(config.REDIS_HOST);
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        const peer = callerPeer();
-        const exists = await client.hexists(peerHashKey(sha, 's'), peer);
-        await client.quit();
-
-        if (exists !== 0) {
-            throw new Error(`Expected peer ${peer.toString('hex')} to be absent from seeder hash`);
-        }
+        const result = await axios.get(
+            `${config.KIRYUU_HOST}/test/peer-exists?info_hash=${urlEncodeBuffer(sha)}&pool=s&port=4444`,
+            { validateStatus: () => true },
+        );
+        strictEqual(result.status, 404, `Fail, expected peer absent from seeder hash, received HTTP ${result.status}`);
     }
 
     @Step("Peer should exist in leecher hash")
     public async peerInLeecherHash(){
-        const client = new Redis(config.REDIS_HOST);
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        const peer = callerPeer();
-        const exists = await client.hexists(peerHashKey(sha, 'l'), peer);
-        await client.quit();
-
-        if (exists !== 1) {
-            throw new Error(`Expected peer ${peer.toString('hex')} in leecher hash`);
-        }
+        const result = await axios.get(
+            `${config.KIRYUU_HOST}/test/peer-exists?info_hash=${urlEncodeBuffer(sha)}&pool=l&port=4444`,
+            { validateStatus: () => true },
+        );
+        strictEqual(result.status, 200, `Fail, expected peer in leecher hash, received HTTP ${result.status}`);
     }
 
     @Step("Peer should not exist in leecher hash")
     public async peerNotInLeecherHash(){
-        const client = new Redis(config.REDIS_HOST);
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        const peer = callerPeer();
-        const exists = await client.hexists(peerHashKey(sha, 'l'), peer);
-        await client.quit();
-
-        if (exists !== 0) {
-            throw new Error(`Expected peer ${peer.toString('hex')} to be absent from leecher hash`);
-        }
+        const result = await axios.get(
+            `${config.KIRYUU_HOST}/test/peer-exists?info_hash=${urlEncodeBuffer(sha)}&pool=l&port=4444`,
+            { validateStatus: () => true },
+        );
+        strictEqual(result.status, 404, `Fail, expected peer absent from leecher hash, received HTTP ${result.status}`);
     }
 }
