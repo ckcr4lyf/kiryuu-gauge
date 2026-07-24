@@ -3,6 +3,8 @@ import { Step, DataStoreFactory } from 'gauge-ts';
 import Redis from 'ioredis';
 import { config } from './config';
 
+type PeerPool = 's' | 'l';
+
 const peerExists = (peer: Buffer, existing: Buffer[]): boolean => {
     return existing.some(existingPeer => peer.compare(existingPeer) === 0);
 }
@@ -13,7 +15,6 @@ export const genUniquePeers = (count: number, existingPeers: Buffer[]): Buffer[]
     for (let i = 0; i < count; i++){
         let peer = crypto.randomBytes(6);
         
-        // keep generating if not unique
         while (peerExists(peer, [...existingPeers, ...generatedPeers]) === true){
             peer = crypto.randomBytes(6);
         }
@@ -24,62 +25,99 @@ export const genUniquePeers = (count: number, existingPeers: Buffer[]): Buffer[]
     return generatedPeers;
 }
 
-export const addPeers = async (infohash: Buffer): Promise<Buffer[]> => {
+export const addPeers = async (infohash: Buffer, pool: PeerPool = 's'): Promise<Buffer[]> => {
     const client = new Redis(config.REDIS_HOST);
-    const seederKey = Buffer.concat([infohash, Buffer.from(":s")]); // `${20 RAW BYTES}:s`
+    const peerKey = Buffer.concat([infohash, Buffer.from(`:${pool}`)]);
     const peersToAdd = genUniquePeers(50, []);
     
     for (let i = 0; i < peersToAdd.length; i++){
         const dataToAdd = new Map<Buffer, Buffer>();
         dataToAdd.set(peersToAdd[i], Buffer.from([0x31]));
-        await client.hset(seederKey, dataToAdd);
-        await client.call("HEXPIRE", seederKey, 60 * 31, "FIELDS", 1, peersToAdd[i]);
+        await client.hset(peerKey, dataToAdd);
+        await client.call("HEXPIRE", peerKey, 60 * 31, "FIELDS", 1, peersToAdd[i]);
     }
 
+    await client.quit();
     return peersToAdd;
 }
 
+const callerPeer = (): Buffer => Buffer.from(config.ANNOUNCE_IP_PORT, 'hex');
+
+const peerHashKey = (infohash: Buffer, pool: PeerPool): Buffer =>
+    Buffer.concat([infohash, Buffer.from(`:${pool}`)]);
+
 export default class RedisStuffs {
+    @Step("Generate fresh infohash")
+    public async generateFreshInfohash(){
+        const sha = crypto.randomBytes(20);
+        DataStoreFactory.getScenarioDataStore().put('infohash', sha);
+    }
+
     @Step("Seed redis with seeders")
     public async seedRedis(){
-        // Generate fake 20 byte "SHA"
         const sha = crypto.randomBytes(20);
-        const peersAdded = await addPeers(sha);
+        const peersAdded = await addPeers(sha, 's');
         DataStoreFactory.getScenarioDataStore().put('infohash', sha);
         DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
 
-    @Step("Add self as old seeder")
-    public async addOldSeeder(){
-        const client = new Redis(config.REDIS_HOST);
+    @Step("Seed redis with leechers")
+    public async seedRedisLeechers(){
         const sha = crypto.randomBytes(20);
-        const infohash = sha.toString('hex');
-        const seederKey = `${infohash}_seeders`;
-        const peer = Buffer.from(config.ANNOUNCE_IP_PORT, 'hex'); // e.g. 7F000001115C (0x7F = 127, 0x115C = 4444)
-        
-        await client.zadd(seederKey, 0, peer);
-        console.log(`Added peer to ${seederKey}`);
+        const peersAdded = await addPeers(sha, 'l');
         DataStoreFactory.getScenarioDataStore().put('infohash', sha);
+        DataStoreFactory.getScenarioDataStore().put('peersAdded', peersAdded);
     }
 
-    @Step("Expect to be in redis with new timestamp")
-    public async checkSelf(){
+    @Step("Peer should exist in seeder hash")
+    public async peerInSeederHash(){
         const client = new Redis(config.REDIS_HOST);
         const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
-        const infohash = sha.toString('hex');
-        const seederKey = `${infohash}_seeders`;
-        const result = await client.zrangebyscoreBuffer(seederKey, 0, '+inf', 'WITHSCORES');
+        const peer = callerPeer();
+        const exists = await client.hexists(peerHashKey(sha, 's'), peer);
+        await client.quit();
 
-        if (result.length !== 2){
-            throw new Error(`Expected two entries in response, got ${result.length}. [Result = ${result.map(el => el.toString('hex'))}]`);
+        if (exists !== 1) {
+            throw new Error(`Expected peer ${peer.toString('hex')} in seeder hash`);
         }
+    }
 
-        const score = parseInt(result[1].toString());
-        const now = Date.now();
+    @Step("Peer should not exist in seeder hash")
+    public async peerNotInSeederHash(){
+        const client = new Redis(config.REDIS_HOST);
+        const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
+        const peer = callerPeer();
+        const exists = await client.hexists(peerHashKey(sha, 's'), peer);
+        await client.quit();
 
-        // 10 seconds is generous
-        if (now - score > 10000){
-            throw new Error(`Expected diff to be within 10 seconds but was more! Now: ${now} , Score: ${score}`);
+        if (exists !== 0) {
+            throw new Error(`Expected peer ${peer.toString('hex')} to be absent from seeder hash`);
+        }
+    }
+
+    @Step("Peer should exist in leecher hash")
+    public async peerInLeecherHash(){
+        const client = new Redis(config.REDIS_HOST);
+        const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
+        const peer = callerPeer();
+        const exists = await client.hexists(peerHashKey(sha, 'l'), peer);
+        await client.quit();
+
+        if (exists !== 1) {
+            throw new Error(`Expected peer ${peer.toString('hex')} in leecher hash`);
+        }
+    }
+
+    @Step("Peer should not exist in leecher hash")
+    public async peerNotInLeecherHash(){
+        const client = new Redis(config.REDIS_HOST);
+        const sha: Buffer = DataStoreFactory.getScenarioDataStore().get('infohash');
+        const peer = callerPeer();
+        const exists = await client.hexists(peerHashKey(sha, 'l'), peer);
+        await client.quit();
+
+        if (exists !== 0) {
+            throw new Error(`Expected peer ${peer.toString('hex')} to be absent from leecher hash`);
         }
     }
 }

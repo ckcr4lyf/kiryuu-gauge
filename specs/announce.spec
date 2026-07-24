@@ -9,3 +9,18 @@ Recall the hex string is used in redis, and the % URL encoded bytes in GET param
 
 * Seed redis with seeders
 * Announce should have expected seeders
+
+## Should get leechers correctly
+
+* Seed redis with leechers
+* Announce should have expected leechers
+
+## Fresh torrent should count caller as leecher
+
+* Generate fresh infohash
+* Announce should report zero seeders and one leecher
+
+## Malformed announce should return HTTP 400
+
+* Announce with missing port should return HTTP 400
+* Announce with garbage query should return HTTP 400
