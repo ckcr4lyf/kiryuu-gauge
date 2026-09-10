@@ -7,7 +7,13 @@
         /* Specify module code generation: 'none', commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
         "lib": ["es2016"],                             /* Specify library files to be included in the compilation:  */
         /* Module Resolution Options */
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
+        "types": ["node"],
+        /* Strictness Options */
+        "strictNullChecks": false /* TS7's native compiler defaults this to true even without "strict"; keep prior loose behavior to avoid a large unrelated type-fix diff. */,
+        "useUnknownInCatchVariables": false /* Same as above, for catch-clause variable typing. */,
+        "noImplicitAny": false /* Same as above, for parameters/variables with inferred any type. */,
+        "esModuleInterop": true /* Needed for default-import style (axios, bencode). */,
         /* Experimental Options */
         "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
         "emitDecoratorMetadata": true,         /* Enables experimental support for emitting type metadata for decorators. */
