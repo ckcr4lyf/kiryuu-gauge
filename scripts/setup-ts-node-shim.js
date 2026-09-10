@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Postinstall: wire scripts/ts-node-shim.js into node_modules/.bin/ts-node
-// so gauge-ts launcher (which hardcodes that path) picks up tsx instead.
+// so gauge-ts 0.5.1's `npx ts-node` launcher picks up tsx instead.
 const fs = require('fs');
 const path = require('path');
 

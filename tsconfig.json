@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
         /* Basic Options */
-        "target": "es6",
-        /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'. */
+        "target": "es2020",
+        /* gauge-ts 0.5.1 uses TC39 Stage 3 decorators, which need ES2020+. */
         "module": "commonjs",
         /* Specify module code generation: 'none', commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
-        "lib": ["es2016"],                             /* Specify library files to be included in the compilation:  */
+        "lib": ["es2020"],                             /* Specify library files to be included in the compilation:  */
         /* Module Resolution Options */
         "moduleResolution": "bundler",
         "types": ["node"],
@@ -14,9 +14,6 @@
         "useUnknownInCatchVariables": false /* Same as above, for catch-clause variable typing. */,
         "noImplicitAny": false /* Same as above, for parameters/variables with inferred any type. */,
         "esModuleInterop": true /* Needed for default-import style (axios, bencode). */,
-        /* Experimental Options */
-        "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
-        "emitDecoratorMetadata": true,         /* Enables experimental support for emitting type metadata for decorators. */
     },
     "exclude": [
         "node_modules",
