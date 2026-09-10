@@ -12,7 +12,9 @@ gauge run specs/
 
 There is no `postinstall` hook; the shim must be applied by hand (or by the Dockerfile, which runs the same script after `npm ci`).
 
-The Dockerfile also runs `gauge install ts -v 0.3.4`. The Gauge **plugin** is a separate artifact from the `gauge-ts` **npm** package; `package-lock.json` only locks the latter. If the plugin is missing at runtime, `gauge run` installs the latest plugin (0.5.1 as of this writing), whose launcher is not the 0.3.4 `npx ts-node` entry this shim is written for.
+The Dockerfile installs the Gauge **ts plugin** with `gauge install ts -v 0.3.4`. That plugin is a separate artifact from the `gauge-ts` **npm** package; `package-lock.json` only locks the latter. If the plugin is missing at runtime, `gauge run` installs the latest plugin (0.5.1 as of this writing), whose launcher is not the 0.3.4 `npx ts-node` entry this shim is written for.
+
+Plugins are installed under `GAUGE_HOME=/opt/gauge`, not `$HOME/.gauge`. GitHub Actions container jobs set `HOME=/github/home` (an empty host mount), so a plugin baked into `/root/.gauge` during `docker build` is not visible at `docker run`. Without `GAUGE_HOME`, Gauge then reports `Compatible version of plugin ts not found` and installs 0.5.1.
 
 `npm run check-type` typechecks this repo with TypeScript 7.
 
